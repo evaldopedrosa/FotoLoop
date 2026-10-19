@@ -1,0 +1,8 @@
+.build/
+.swiftpm/
+work/
+outputs/
+/Aplicativo/*.app/
+*.xcuserstate
+.DS_Store
+/HANDOFF.md
