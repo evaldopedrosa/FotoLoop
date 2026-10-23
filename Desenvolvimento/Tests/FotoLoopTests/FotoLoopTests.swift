@@ -32,19 +32,20 @@ final class FotoLoopTests {
              CGColor(red: 0, green: 0, blue: 1, alpha: 1), CGColor(red: 1, green: 1, blue: 0, alpha: 1)]
             .enumerated().map { try image("foto\($0.offset).jpg", color: $0.element) }
     }
-    func options(_ photos: [URL], fps: Int = 8, pingPong: Bool = false, repetitions: Int = 1, format: CanvasFormat = .original, framing: ImageFraming = .fit) -> ExportOptions {
-        ExportOptions(photos: photos, fps: fps, maximumDimension: 720, quality: 2, pingPong: pingPong,
+    func options(_ photos: [URL], fps: Int = 8, direction: PlaybackDirection = .forward, repetitions: Int = 1, format: CanvasFormat = .original, framing: ImageFraming = .fit) -> ExportOptions {
+        ExportOptions(photos: photos, fps: fps, maximumDimension: 720, quality: 2, direction: direction,
                       repetitions: repetitions, format: format, framing: framing)
     }
     @Test
     func testSequenceTimingAndEndpoints() {
-        #expect((AnimationSequence.indices(count: 0, pingPong: true)) == ([]))
-        #expect((AnimationSequence.indices(count: 1, pingPong: true)) == ([0]))
-        #expect((AnimationSequence.indices(count: 2, pingPong: true)) == ([0, 1]))
-        #expect((AnimationSequence.indices(count: 4, pingPong: true)) == ([0, 1, 2, 3, 2, 1]))
-        #expect((AnimationSequence.indices(count: 4, pingPong: false)) == ([0, 1, 2, 3]))
-        #expect((AnimationSequence.duration(count: 4, pingPong: false, repetitions: 4, fps: 4)) == (4))
-        #expect((AnimationSequence.duration(count: 4, pingPong: true, repetitions: 4, fps: 6)) == (4))
+        #expect((AnimationSequence.indices(count: 0, direction: .pingPong)) == ([]))
+        #expect((AnimationSequence.indices(count: 1, direction: .pingPong)) == ([0]))
+        #expect((AnimationSequence.indices(count: 2, direction: .pingPong)) == ([0, 1]))
+        #expect((AnimationSequence.indices(count: 4, direction: .pingPong)) == ([0, 1, 2, 3, 2, 1]))
+        #expect((AnimationSequence.indices(count: 4, direction: .forward)) == ([0, 1, 2, 3]))
+        #expect((AnimationSequence.indices(count: 4, direction: .reverse)) == ([3, 2, 1, 0]))
+        #expect((AnimationSequence.duration(count: 4, direction: .forward, repetitions: 4, fps: 4)) == (4))
+        #expect((AnimationSequence.duration(count: 4, direction: .pingPong, repetitions: 4, fps: 6)) == (4))
     }
     @Test
     func testCanvasAndFraming() {
@@ -130,13 +131,13 @@ final class FotoLoopTests {
         #expect((model.selected) == (urls[0]))
         model.removeSelected()
         #expect(!(model.photos.contains(urls[0])))
-        model.fps = 30; model.pingPong = true; model.repetitions = 4; model.format = .vertical
+        model.fps = 30; model.direction = .pingPong; model.repetitions = 4; model.format = .vertical
         model.clearSession()
         #expect(model.photos.isEmpty)
         #expect(model.selected == nil)
         #expect((model.fps) == (10))
         #expect((model.repetitions) == (1))
-        #expect(!(model.pingPong))
+        #expect((model.direction) == (.forward))
         #expect((model.format) == (.original))
         #expect(!(old === model.images))
         // Clear while an import is queued, then start a fresh session.
@@ -235,11 +236,11 @@ final class FotoLoopTests {
         for fps in FotoLoopModel.frameRates {
             for kind in [OutputKind.gif, .mp4] {
                 let path = root.appendingPathComponent("fps\(fps).\(kind == .gif ? "gif" : "mp4")")
-                let config = options(urls, fps: fps, pingPong: true, repetitions: 4)
+                let config = options(urls, fps: fps, direction: .pingPong, repetitions: 4)
                 try FotoExporter.write(options: config, kind: kind, to: path)
                 let metadata = try probe(path)
                 let duration = try #require((metadata["duration"] as? String).flatMap(Double.init))
-                let expected = AnimationSequence.duration(count: 4, pingPong: true, repetitions: 4, fps: fps)
+                let expected = AnimationSequence.duration(count: 4, direction: .pingPong, repetitions: 4, fps: fps)
                 #expect(abs((duration) - (expected)) <= (kind == .gif ? 0.02 : 1.0 / 30))
                 if kind == .gif {
                     let source = try #require(CGImageSourceCreateWithURL(path as CFURL, nil))
@@ -259,6 +260,21 @@ final class FotoLoopTests {
                     }
                 }
             }
+        }
+    }
+    @Test
+    func testReverseExportOrder() throws {
+        let urls = try photos()
+        let output = root.appendingPathComponent("reverse.gif")
+        try FotoExporter.write(options: options(urls, direction: .reverse), kind: .gif, to: output)
+        let source = try #require(CGImageSourceCreateWithURL(output as CFURL, nil))
+        #expect((CGImageSourceGetCount(source)) == (4))
+        for (frame, index) in [3, 2, 1, 0].enumerated() {
+            let image = try #require(CGImageSourceCreateImageAtIndex(source, frame, nil))
+            let rgb = pixel(image, x: image.width / 2, y: image.height / 2)
+            #expect((rgb.0 > 100) == (index == 0 || index == 3))
+            #expect((rgb.1 > 100) == (index == 1 || index == 3))
+            #expect((rgb.2 > 100) == (index == 2))
         }
     }
     func pixel(_ image: CGImage, x: Int, y: Int) -> (UInt8, UInt8, UInt8) {

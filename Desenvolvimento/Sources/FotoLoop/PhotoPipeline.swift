@@ -9,9 +9,9 @@ enum CanvasFormat: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .original: return "Original"
-        case .square: return "Quadrado · 1:1"
-        case .portrait: return "Retrato · 4:5"
-        case .landscape: return "Paisagem · 5:4"
+        case .square: return "Square · 1:1"
+        case .portrait: return "Portrait · 4:5"
+        case .landscape: return "Landscape · 5:4"
         case .widescreen: return "Widescreen · 16:9"
         case .vertical: return "Vertical · 9:16"
         }
@@ -31,17 +31,39 @@ enum CanvasFormat: String, CaseIterable, Identifiable, Sendable {
 enum ImageFraming: String, CaseIterable, Identifiable, Sendable {
     case fit, fill
     var id: Self { self }
-    var title: String { self == .fit ? "Ajustar" : "Preencher" }
+    var title: String { self == .fit ? "Fit" : "Fill" }
+}
+
+enum PlaybackDirection: String, CaseIterable, Identifiable, Sendable {
+    case forward, reverse, pingPong
+    var id: Self { self }
+    var title: String {
+        switch self {
+        case .forward: return "Forward"
+        case .reverse: return "Reverse"
+        case .pingPong: return "Ping-pong"
+        }
+    }
 }
 
 enum AnimationSequence {
-    static func indices(count: Int, pingPong: Bool) -> [Int] {
+    static func indices(count: Int, direction: PlaybackDirection) -> [Int] {
         guard count > 0 else { return [] }
         let forward = Array(0..<count)
-        return pingPong && count > 2 ? forward + Array((1..<(count - 1)).reversed()) : forward
+        switch direction {
+        case .forward: return forward
+        case .reverse: return Array(forward.reversed())
+        case .pingPong: return count > 2 ? forward + Array((1..<(count - 1)).reversed()) : forward
+        }
     }
-    static func duration(count: Int, pingPong: Bool, repetitions: Int, fps: Int) -> Double {
-        Double(indices(count: count, pingPong: pingPong).count * repetitions) / Double(fps)
+    static func duration(count: Int, direction: PlaybackDirection, repetitions: Int, fps: Int) -> Double {
+        Double(indices(count: count, direction: direction).count * repetitions) / Double(fps)
+    }
+    static func heldIndices(count: Int, direction: PlaybackDirection, hold: Int) -> [Int] {
+        indices(count: count, direction: direction).flatMap { Array(repeating: $0, count: max(1, hold)) }
+    }
+    static func duration(count: Int, direction: PlaybackDirection, repetitions: Int, fps: Int, hold: Int) -> Double {
+        Double(heldIndices(count: count, direction: direction, hold: hold).count * repetitions) / Double(fps)
     }
     static func dimensions(ratio: Double, maximum: Int, original: CGSize) -> CGSize {
         // Avoid enlarging small originals; dimensions are even for H.264.

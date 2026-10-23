@@ -10,10 +10,11 @@ struct ExportOptions: Sendable {
     let fps: Int
     let maximumDimension: Int
     let quality: Int
-    let pingPong: Bool
+    let direction: PlaybackDirection
     var repetitions = 1
     var format: CanvasFormat = .original
     var framing: ImageFraming = .fit
+    var holdFrames = 1
 }
 
 enum FotoExporter {
@@ -23,7 +24,8 @@ enum FotoExporter {
             throw ExportError.invalidImage(options.photos.first?.lastPathComponent ?? "")
         }
         guard [4, 6, 8, 10, 12, 15, 20, 24, 30].contains(options.fps),
-              (1...20).contains(options.repetitions), (1...3).contains(options.quality),
+              (1...20).contains(options.repetitions), (1...4).contains(options.holdFrames),
+              (1...3).contains(options.quality),
               [720, 1080, 1920].contains(options.maximumDimension) else { throw ExportError.renderFailed }
         guard let executable = ffmpegURL() else { throw ExportError.ffmpegMissing }
         let canvas = AnimationSequence.dimensions(ratio: options.format.ratio(original: original.width / original.height),
@@ -51,17 +53,18 @@ enum FotoExporter {
                 // Use original proportions to avoid thumbnail rounding changing the crop.
                 context.draw(image, in: rect)
                 guard let rendered = context.makeImage() else { throw ExportError.renderFailed }
-                let file = temporary.appendingPathComponent(String(format: "%06d.jpg", index))
+                let file = temporary.appendingPathComponent(String(format: "source-%06d.jpg", index))
                 guard let output = CGImageDestinationCreateWithURL(file as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else { throw ExportError.renderFailed }
                 CGImageDestinationAddImage(output, rendered, [kCGImageDestinationLossyCompressionQuality: 0.96] as CFDictionary)
                 guard CGImageDestinationFinalize(output) else { throw ExportError.renderFailed }
             }
             progress(Double(index + 1) / Double(options.photos.count) * 0.8)
         }
-        let order = AnimationSequence.indices(count: options.photos.count, pingPong: options.pingPong)
-        // Hard links reuse the already rendered images on the return path.
-        for index in options.photos.count..<order.count {
-            try FileManager.default.linkItem(at: temporary.appendingPathComponent(String(format: "%06d.jpg", order[index])),
+        let order = AnimationSequence.heldIndices(count: options.photos.count,
+                                                  direction: options.direction, hold: options.holdFrames)
+        // Hard links build any playback order without rendering a source photo twice.
+        for (index, sourceIndex) in order.enumerated() {
+            try FileManager.default.linkItem(at: temporary.appendingPathComponent(String(format: "source-%06d.jpg", sourceIndex)),
                                             to: temporary.appendingPathComponent(String(format: "%06d.jpg", index)))
         }
         try runFFmpeg(executable: executable, options: options, kind: kind, input: temporary, output: staging)
@@ -106,9 +109,9 @@ enum FotoExporter {
             let length = try reader.seekToEnd()
             try reader.seek(toOffset: length > 2048 ? length - 2048 : 0)
             let detail = String(data: try reader.readToEnd() ?? Data(), encoding: .utf8) ?? ""
-            throw ExportError.ffmpegFailed(detail.isEmpty ? "Código \(process.terminationStatus)." : detail)
+            throw ExportError.ffmpegFailed(detail.isEmpty ? "Exit code \(process.terminationStatus)." : detail)
         }
-        guard FileManager.default.fileExists(atPath: output.path) else { throw ExportError.ffmpegFailed("O arquivo não foi criado.") }
+        guard FileManager.default.fileExists(atPath: output.path) else { throw ExportError.ffmpegFailed("The file was not created.") }
     }
 }
 
@@ -116,10 +119,10 @@ enum ExportError: LocalizedError {
     case ffmpegMissing, invalidImage(String), renderFailed, ffmpegFailed(String)
     var errorDescription: String? {
         switch self {
-        case .ffmpegMissing: return "FFmpeg não foi encontrado. Instale com: brew install ffmpeg"
-        case .invalidImage(let name): return "Não foi possível abrir a foto \(name)."
-        case .renderFailed: return "Não foi possível preparar uma das fotos para exportação."
-        case .ffmpegFailed(let detail): return "Falha ao exportar: \(detail)"
+        case .ffmpegMissing: return "FFmpeg was not found. Install it with: brew install ffmpeg"
+        case .invalidImage(let name): return "Could not open photo \(name)."
+        case .renderFailed: return "Could not prepare one of the photos for export."
+        case .ffmpegFailed(let detail): return "Export failed: \(detail)"
         }
     }
 }

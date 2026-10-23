@@ -10,4 +10,4 @@ cd Desenvolvimento
 open ../Aplicativo/FotoLoop.app
 ```
 
-Export requires FFmpeg with `libx264` on the Mac. The current bundle is not signed or notarized for distribution.
+Export requires FFmpeg with `libx264` on the Mac. Video import also requires FFprobe beside FFmpeg. The current bundle is not signed or notarized for distribution.

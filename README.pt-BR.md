@@ -4,15 +4,18 @@
 
 <img src="Design/FotoLoop-AppIcon-1024.png" alt="Ícone do FotoLoop" width="96">
 
-FotoLoop é um app nativo e offline para transformar uma sequência de fotografias em GIF ou MP4. Escolha as fotos, ajuste o ritmo e exporte. Os arquivos permanecem no seu Mac.
+FotoLoop é um app nativo e offline para transformar uma sequência de fotografias ou um trecho de vídeo em GIF ou MP4. Ajuste o ritmo e exporte. Os arquivos permanecem no seu Mac.
 
 ## Prévia
 
-![FotoLoop com uma sequência de dez fotos no modo escuro](docs/images/fotoloop-editor-dark.png)
+[![Demonstração do FotoLoop com importação, ajustes e exportação](docs/images/fotoloop-demo-cover.png)](docs/media/fotoloop-demo.mp4)
+
+[Assista à demonstração de 12 segundos](docs/media/fotoloop-demo.mp4). Ela combina capturas da interface atual com fotografias de exemplo geradas.
 
 <details>
-<summary>Ver a tela inicial</summary>
+<summary>Ver capturas anteriores do aplicativo</summary>
 
+![FotoLoop com uma sequência de fotos na interface anterior em português](docs/images/fotoloop-editor-dark.png)
 ![Tela inicial do FotoLoop no modo escuro](docs/images/fotoloop-empty-dark.png)
 
 </details>
@@ -20,19 +23,23 @@ FotoLoop é um app nativo e offline para transformar uma sequência de fotografi
 ## O que faz
 
 - Importa JPG, PNG e HEIC, inclusive pastas com subpastas, em ordem natural.
+- Importa um vídeo, como MP4 ou MOV, e permite escolher um trecho de até 30 segundos. Vídeos e fotos usam sessões separadas.
 - Permite reorganizar as fotos por arrastar e soltar ou pelos botões de seta.
-- Oferece 4 a 30 fotos/s, ping-pong e 1 a 20 repetições da sequência. O loop infinito do GIF é independente dessas repetições.
+- Oferece 4 a 30 quadros/s (FPS), direção Forward, Reverse ou Ping-pong e 1 a 20 repetições da sequência. O loop infinito do GIF é independente dessas repetições.
+- Em vídeos, reduzir o FPS amostra menos quadros e mantém aproximadamente a duração do trecho. **Hold each frame** (1–4×) prolonga cada quadro e aumenta a duração. O vídeo original é preservado.
 - Exporta no formato original ou nas proporções 1:1, 4:5, 5:4, 16:9 e 9:16, ajustando a foto inteira ou preenchendo o quadro com corte central.
-- Mostra a prévia e permite encerrar a sessão para começar outra sem reiniciar.
+- Mostra a prévia com reprodução/pausa e uma faixa visual de quadros; permite encerrar a sessão para começar outra sem reiniciar.
 - Acompanha o modo claro/escuro do macOS ou usa uma preferência salva.
 
-O app usa SwiftUI e AppKit na interface, ImageIO para ler as fotos e FFmpeg para codificar os arquivos. Não há conta, rede, analytics nem pacotes Swift de terceiros.
+O app usa SwiftUI e AppKit na interface, ImageIO para ler os quadros e FFmpeg/FFprobe para receber vídeo e codificar os arquivos. Não há conta, rede, analytics nem pacotes Swift de terceiros.
+Os controles do aplicativo estão em inglês.
+O cabeçalho mostra o ícone do projeto; o rodapé mostra versão, autoria, licença MIT e ajuda integrada.
 
 ## Começar
 
 **Distribuição atual: código-fonte.** Ainda não existe DMG nem pacote Homebrew para o FotoLoop. O Homebrew é usado aqui apenas para instalar o FFmpeg, necessário para exportar.
 
-Requisitos: macOS 13 ou posterior, Swift 5.9+ com o SDK do macOS e FFmpeg com `libx264`. Esta versão foi compilada e verificada em um Mac Apple Silicon; ainda não foi validada em Intel ou em um Mac físico com macOS 13.
+Requisitos: macOS 13 ou posterior, Swift 5.9+ com o SDK do macOS e FFmpeg com `libx264` e FFprobe. Esta versão foi compilada em um Mac Apple Silicon; ainda não foi validada em Intel ou em um Mac físico com macOS 13.
 
 1. Instale as Ferramentas de Linha de Comando da Apple com `xcode-select --install` (ou use o Xcode). Se ainda não tiver o Homebrew, siga as instruções em [brew.sh](https://brew.sh/).
 2. Instale o FFmpeg, clone o repositório e compile o FotoLoop:
@@ -51,10 +58,12 @@ O FotoLoop procura o FFmpeg em `/opt/homebrew/bin/ffmpeg`, `/usr/local/bin/ffmpe
 
 ## Uso
 
-1. Adicione fotos ou importe uma pasta.
+1. Arraste fotos ou uma pasta do Finder para a prévia, ou use **Photos** e **Folder** na barra lateral.
 2. Arraste uma miniatura para a linha de inserção desejada, ou selecione-a e use as setas.
-3. Ajuste velocidade, ping-pong, repetições, proporção, enquadramento, resolução e qualidade.
-4. Exporte GIF ou MP4. Use **Encerrar sessão** para limpar a sequência e começar novamente.
+3. Ajuste FPS, direção e repetições em **Sequence**; proporção, enquadramento, resolução e qualidade em **Export**.
+4. Exporte GIF ou MP4. Use **Clear session** para limpar a sequência e começar novamente.
+
+Para partir de vídeo, use **Video** ou arraste um arquivo para a prévia. Escolha o início e a duração do trecho, ajuste FPS e **Hold each frame** na aba Sequence e exporte. Proporção, enquadramento e qualidade são os mesmos das fotos. Os quadros temporários são removidos ao encerrar a sessão.
 
 **Ajustar** preserva a foto inteira, com margens pretas quando necessário. **Preencher** usa corte central sem distorção. Todas as fotos do arquivo usam as mesmas dimensões. A duração aproximada aparece na interface; o GIF usa tempos em centésimos de segundo e o MP4 sai a 30 quadros/s.
 
@@ -65,6 +74,7 @@ O FotoLoop procura o FFmpeg em `/opt/homebrew/bin/ffmpeg`, `/usr/local/bin/ffmpe
 | `Desenvolvimento/` | Código SwiftPM, testes e scripts | Código e scripts sim; `.build/` e `work/` não |
 | `Aplicativo/` | App compilado para uso local | Apenas este guia; `FotoLoop.app` não |
 | `Design/` | PNG, pacote de tamanhos e `.icns` do ícone | Sim |
+| `docs/` | Vídeo de demonstração, capa e capturas de tela | Sim |
 
 `AGENTS.md`, `PERFORMANCE.md` e `LICENSE` acompanham o código. `HANDOFF.md`, caches, amostras sintéticas e arquivos antigos ficam somente no Mac.
 
@@ -75,7 +85,7 @@ cd Desenvolvimento
 ./scripts/test.sh
 ```
 
-Os dez testes usam imagens sintéticas e verificam importação, sessão, ordem, enquadramento, cache e GIF/MP4 em 42 combinações de exportação. Importação, arrasto, exportação pelos painéis e nova sessão também foram verificados na interface com imagens sintéticas.
+Os onze testes usam imagens sintéticas e verificam importação, sessão, ordem, enquadramento, cache e GIF/MP4 em 42 combinações de exportação, além da ordem do GIF em Reverse. Importação, arrasto, exportação pelos painéis e nova sessão foram verificados na interface da versão anterior com imagens sintéticas.
 
 As medições e suas limitações estão em [PERFORMANCE.md](PERFORMANCE.md). Num ensaio isolado com 24 JPEGs de 6000 × 4000 px, a prévia com cache aquecido teve mediana 72% menor e a decodificação limitada à resolução de exportação teve mediana 78% menor. Isso não mede a melhora de FPS ou memória do app inteiro; o cache frio ainda pode causar perda de quadros na prévia.
 

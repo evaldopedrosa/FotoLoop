@@ -21,7 +21,7 @@ struct NativePhotoList: NSViewRepresentable {
         column.width = 280
         table.addTableColumn(column)
         table.headerView = nil
-        table.rowHeight = 46
+        table.rowHeight = 82
         table.intercellSpacing = NSSize(width: 0, height: 2)
         table.style = .inset
         table.backgroundColor = .textBackgroundColor
@@ -31,7 +31,7 @@ struct NativePhotoList: NSViewRepresentable {
         table.registerForDraggedTypes([Self.dragType])
         table.setDraggingSourceOperationMask(.move, forLocal: true)
         table.setDraggingSourceOperationMask([], forLocal: false)
-        table.setAccessibilityLabel("Fotos na ordem da animação")
+        table.setAccessibilityLabel("Frames in animation order")
         table.delegate = context.coordinator
         table.dataSource = context.coordinator
         scroll.documentView = table
@@ -137,7 +137,8 @@ private final class ThumbnailCell: NSTableCellView {
         thumbnail.imageScaling = .scaleProportionallyUpOrDown
         number.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         number.textColor = .secondaryLabelColor
-        name.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        name.font = .systemFont(ofSize: 11)
+        name.textColor = .secondaryLabelColor
         name.lineBreakMode = .byTruncatingMiddle
         for view in [thumbnail, number, name] {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -146,9 +147,9 @@ private final class ThumbnailCell: NSTableCellView {
         NSLayoutConstraint.activate([
             thumbnail.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
             thumbnail.centerYAnchor.constraint(equalTo: centerYAnchor),
-            thumbnail.widthAnchor.constraint(equalToConstant: 42), thumbnail.heightAnchor.constraint(equalToConstant: 34),
+            thumbnail.widthAnchor.constraint(equalToConstant: 92), thumbnail.heightAnchor.constraint(equalToConstant: 72),
             number.leadingAnchor.constraint(equalTo: thumbnail.trailingAnchor, constant: 8),
-            number.centerYAnchor.constraint(equalTo: centerYAnchor), number.widthAnchor.constraint(equalToConstant: 24),
+            number.centerYAnchor.constraint(equalTo: centerYAnchor), number.widthAnchor.constraint(equalToConstant: 22),
             name.leadingAnchor.constraint(equalTo: number.trailingAnchor, constant: 6),
             name.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6), name.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])
@@ -158,7 +159,7 @@ private final class ThumbnailCell: NSTableCellView {
     func configure(url: URL, index: Int, session: UUID, store: PreviewImageStore) {
         number.stringValue = String(format: "%02d", index + 1)
         name.stringValue = url.lastPathComponent
-        setAccessibilityLabel("Foto \(index + 1), \(url.lastPathComponent)")
+        setAccessibilityLabel("Frame \(index + 1), \(url.lastPathComponent)")
         guard representedURL != url || representedSession != session else { return }
         clear()
         representedURL = url
